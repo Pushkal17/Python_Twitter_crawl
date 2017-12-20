@@ -10,7 +10,6 @@ import ParseTwitterConfig
 #from pyvirtualdisplay import Display
 
 
-
 class SeleniumCrawler:
 
     since = "2013-01-01"
@@ -19,7 +18,7 @@ class SeleniumCrawler:
     #till = datetime.today().strftime('%Y-%m-%d')
     queryBase = "https://twitter.com/search?l=en&q="
 
-    def __init__(self, configFile , since = None , till = None ):
+    def __init__(self, configFile, since = None , till = None ):
 
         config = ParseTwitterConfig.Parser(configFile)
         self.service_log_path = "{}/chromedriver.log".format(".")
@@ -29,7 +28,7 @@ class SeleniumCrawler:
         #Uncomment this line for Ubuntu
         self.options.binary_location = config.getChromePath()
         self.driver = config.getChromeDriverPath()
-        print self.options
+        print (self.options)
 
         #self.browser = webdriver.Chrome(self.driver,chrome_options=self.options,service_args=self.service_args,service_log_path=self.service_log_path)
         self.browser = webdriver.Chrome()
@@ -57,9 +56,9 @@ class SeleniumCrawler:
 
     def deserializeTweets(self, tweetText):
         components = tweetText.split('\n')
-        for i in range(len(conponents)):
+        for i in range(len(components)):
             if components[i] == "More":
-                metaText = componets[:i]
+                metaText = components[:i]
         return self
 
     def killBrowser(self):
@@ -77,12 +76,12 @@ class SeleniumCrawler:
         # service_log_path=self.service_log_path)
 
         self.browser.get(url)
-        time.sleep(1)
+       # time.sleep(1)
         try:
             body = self.browser.find_element_by_tag_name('body')
         except NoSuchElementException:
             print "Couldn't find body, moving on"
-            time.sleep(2)
+          #  time.sleep(2)
             return tweetData
 
         for _ in range(pages):
@@ -91,6 +90,7 @@ class SeleniumCrawler:
             time.sleep(2)
 
         try:
+            # permalink-overlay , .stats , .tweet-text
             stream = body.find_element_by_class_name('stream')
             tweets = stream.find_elements_by_class_name('stream-item')
             print "Found %d Tweets " %len(tweets)
@@ -150,20 +150,21 @@ class SeleniumCrawler:
         url = queryString
         print url
         tweetData = dict()
-
         self.browser.get(url)
-        time.sleep(1)
+        #time.sleep(1)
         try:
             body = self.browser.find_element_by_tag_name('body')
         except NoSuchElementException:
             print "Couldn't find body, moving on"
-            time.sleep(2)
+         #   time.sleep(2)
             return tweetData
+        #blank click to check overlay
+        body.click()
 
         for _ in range(pages):
             body.send_keys(Keys.PAGE_DOWN)
             print "Scrolling: %d" %_
-            time.sleep(2)
+            time.sleep(1)
 
         try:
             stream = body.find_element_by_class_name('stream')
@@ -182,15 +183,15 @@ class SeleniumCrawler:
 
             try :
                 meta = tweet.find_element_by_class_name('tweet')
-                print tweet.text
+                #print tweet.text
+                with open('result2.json', 'a') as fp:
+                    json.dump(tweet.text, fp)
 
                 attrs = self.getAttributes(meta)
 
                 content = meta.find_element_by_class_name('content')
 
                 tweet_text = content.find_element_by_class_name('tweet-text').text
-
-
 
 
                 actions = content.find_element_by_class_name('ProfileTweet-actionList')
@@ -215,11 +216,14 @@ class SeleniumCrawler:
             tweetData[attrs['data-tweet-id']]['Reply_count'] = reply_count
             tweetData[attrs['data-tweet-id']]['Retweet_count'] = retweet_count
             tweetData[attrs['data-tweet-id']]['Like_count'] = like_count
-            print tweetData[attrs['data-tweet-id']]
-            print "\n"
+            #print tweetData[attrs['data-tweet-id']]
+            #print "\n"
+            with open('result2.json', 'a') as fp:
+                json.dump(tweetData[attrs['data-tweet-id']], fp)
+            with open('result2.json', 'a') as fp:
+                json.dump("'\n'", fp)
 
-
-        return tweetData
+        return tweetData[attrs['data-tweet-id']]
 
     def getUserInfo(self , usernames):
         baseUrl = "https://www.twitter.com/"
@@ -282,13 +286,13 @@ class SeleniumCrawler:
         url = root + permaLink
         print url
         self.browser.get(url)
-        time.sleep(1)
+        #time.sleep(1)
         attributes = {}
         try:
             body = self.browser.find_element_by_class_name('PermalinkOverlay-body')
         except NoSuchElementException:
             print "Couldn't find body, moving on"
-            time.sleep(2)
+         #   time.sleep(2)
             return tweetDict
         try:
             tweet = body.find_element_by_class_name('tweet')
@@ -326,7 +330,7 @@ if __name__ == "__main__":
     # fp = open(tweetFile,"rb")
     # js = json.load(fp)
 
-    searchObj = SeleniumCrawler("sagarConfig.config")
+    searchObj = SeleniumCrawler("sampleTwitterUser.config")
 
     #crawledData = searchObj.doCrawl(searchObj.encodeQuery(query , True) , 3)
     # for k in js.keys():
@@ -337,9 +341,10 @@ if __name__ == "__main__":
 
 
     # data = searchObj.getUserInfo(['sagarjoglekar','avraman'])
-    data = searchObj.crawlTweetRepliesByURL("https://twitter.com/LondonFire/status/934110306946703360",10)
+    #any link, geocoded, hashtag, replies etc
+    data = searchObj.crawlTweetRepliesByURL("https://twitter.com/theresa_may/status/942376399767244800",20)
     print data
-    # with open('result2.json', 'w') as fp:
-    #     json.dump(crawledData, fp)
+    with open('result2.json', 'a') as fp:
+       json.dump(data, fp)
     searchObj.killBrowser()
-    # display.stop()
+     #display.stop()
